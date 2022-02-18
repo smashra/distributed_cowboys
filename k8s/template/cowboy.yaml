@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Pod
+metadata:
+ name: $$COWBOY
+spec:
+ containers:
+ - name: $$COWBOY
+   image: localhost:5000/shooter 
+   imagePullPolicy: IfNotPresent
+   env:
+   - name: ID
+     value: "$$ID" 
+   - name: NATSEP
+     value: "$$NATSEP"
+   - name: CLIENTPORT
+     value: "$$CLIENTPORT"
+   volumeMounts:
+   - name: config-volume
+     mountPath: /config
+ volumes:
+ - name: config-volume
+   configMap:
+     name: cowboy-configmap
+

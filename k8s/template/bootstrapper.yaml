@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Pod
+metadata:
+ name: $$BS
+spec:
+ containers:
+ - command:
+   - sleep
+   - infinity
+   name: $$BS
+   image: localhost:5000/$$BS 
+   imagePullPolicy: IfNotPresent
+   env:
+   - name: NATSEP
+     value: "$$NATSEP"
+   - name: CLIENTPORT
+     value: "$$CLIENTPORT"
+   volumeMounts:
+   - name: config-volume
+     mountPath: /config
+ volumes:
+ - name: config-volume
+   configMap:
+     name: cowboy-configmap
+
+

@@ -1,0 +1,46 @@
+docker build -t shooter .
+docker build -t bs -f Dockerfile-bs .
+
+sudo docker tag shooter localhost:5000/shooter
+sudo docker push localhost:5000/shooter
+
+sudo docker tag bs localhost:5000/bs
+sudo docker push localhost:5000/bs
+
+
+TEMPL=k8s/template
+mkdir -p deploy
+
+
+for cb in $(jq -r '.[] .name' < data/shooters.json)
+do
+  sed  -e "s/\$\$ID/$(echo $cb)/g" ${TEMPL}/cowboy.yaml > deploy/$cb.yaml
+  lcb=$(echo "$cb" | tr '[:upper:]' '[:lower:]')
+  sed  -i '' -e "s/\$\$COWBOY/$(echo $lcb)/g" deploy/$cb.yaml
+  ep=$(kubectl get ep nats --output=json | jq -r '.subsets[0] .addresses[] .ip')
+  port=$(kubectl get ep nats --output=json | jq -r '.subsets[0] .ports[4].port')
+  sed  -i '' -e "s/\$\$NATSEP/$(echo $ep)/g" deploy/$cb.yaml
+  sed  -i '' -e "s/\$\$CLIENTPORT/$(echo "$port")/g" deploy/$cb.yaml
+done
+  
+
+sed  -e "s/\$\$BS/bs/g" ${TEMPL}/bootstrapper.yaml > deploy/bs.yaml
+ep=$(kubectl get ep nats --output=json | jq -r '.subsets[0] .addresses[] .ip')
+port=$(kubectl get ep nats --output=json | jq -r '.subsets[0] .ports[4].port')
+sed  -i '' -e "s/\$\$NATSEP/$(echo $ep)/g" deploy/bs.yaml
+sed  -i '' -e "s/\$\$CLIENTPORT/$(echo "$port")/g" deploy/bs.yaml
+
+kubectl create configmap cowboy-configmap --from-file=data/shooters.json
+
+
+for cb in $(jq -r '.[] .name' < data/shooters.json)
+do
+kubectl apply -f deploy/${cb}.yaml
+done
+
+kubectl apply -f deploy/bs.yaml
+
+
+
+
+
